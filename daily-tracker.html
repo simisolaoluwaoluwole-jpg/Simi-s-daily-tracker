@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1ec; --surface:#ffffff; --ink:#1f2a24; --sub:#5b6b60;
+    --line:#d8ddd2; --accent:#2f6f5e; --accent-soft:#e2ede8;
+    --amber:#c9762b; --amber-soft:#f6e6d4; --done:#2f6f5e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 18px 80px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
+  .nav-btn{background:none;border:1px solid var(--line);border-radius:8px;width:36px;height:36px;font-size:16px;color:var(--ink);cursor:pointer;}
+  .nav-btn:active{background:var(--accent-soft);}
+  .date-block{text-align:center;flex:1;}
+  .weekday{font-family:'Source Serif 4',serif;font-size:1.7rem;font-weight:600;line-height:1.1;}
+  .fulldate{font-size:0.82rem;color:var(--sub);margin-top:2px;}
+  .today-link{display:block;text-align:center;font-size:0.78rem;color:var(--accent);margin:4px 0 20px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+  .progress-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
+  .progress-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;}
+  .progress-count{font-family:'Source Serif 4',serif;font-size:1.5rem;}
+  .progress-count span{color:var(--sub);font-size:0.95rem;font-family:'Inter',sans-serif;}
+  .bar-track{height:8px;border-radius:5px;background:var(--line);overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:5px;transition:width .25s ease;}
+  .week-strip{display:flex;gap:6px;margin-top:14px;}
+  .week-day{flex:1;text-align:center;}
+  .week-day .dot{height:26px;border-radius:6px;background:var(--line);margin-bottom:4px;position:relative;overflow:hidden;}
+  .week-day .dot-fill{position:absolute;bottom:0;left:0;right:0;background:var(--amber);}
+  .week-day .lbl{font-size:0.65rem;color:var(--sub);}
+  .week-day.is-today .lbl{color:var(--ink);font-weight:600;}
+  section.block{margin-bottom:18px;}
+  .block-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin:0 0 8px 4px;}
+  .row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;user-select:none;}
+  .row.checked{border-color:var(--accent);background:var(--accent-soft);}
+  .check{width:22px;height:22px;flex:none;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;transition:.15s;}
+  .row.checked .check{background:var(--accent);border-color:var(--accent);}
+  .check svg{width:13px;height:13px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);transition:.15s;}
+  .row.checked .check svg{opacity:1;transform:scale(1);}
+  .row-text{flex:1;}
+  .row-label{font-size:0.96rem;font-weight:500;}
+  .row.checked .row-label{color:var(--sub);text-decoration:line-through;text-decoration-color:var(--line);}
+  .row-time{font-size:0.75rem;color:var(--sub);margin-top:1px;}
+  textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:0.92rem;color:var(--ink);background:var(--surface);resize:vertical;}
+  textarea:focus,.check:focus-visible,.nav-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .targets{display:grid;gap:8px;margin-bottom:20px;}
+  .targets input{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:0.88rem;background:var(--surface);color:var(--ink);}
+  .targets label{font-size:0.7rem;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:10px;}
+  .clear-btn{background:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:0.82rem;color:var(--sub);cursor:pointer;}
+  .clear-btn:hover{border-color:#c8544d;color:#c8544d;}
+  .note{background:var(--amber-soft);border-radius:12px;padding:12px 14px;font-size:0.82rem;color:#6b4a1f;margin-top:18px;line-height:1.5;}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#161c18;--surface:#1f2620;--ink:#eef1ec;--sub:#93a09a;--line:#333d36;--accent:#5fae96;--accent-soft:#233029;--amber:#e0a05c;--amber-soft:#2c2417;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <button class="nav-btn" id="prevBtn" aria-label="Previous day">‹</button>
+    <div class="date-block">
+      <div class="weekday" id="weekdayLbl">Monday</div>
+      <div class="fulldate" id="fullDateLbl">1 January 2026</div>
+    </div>
+    <button class="nav-btn" id="nextBtn" aria-label="Next day">›</button>
+  </header>
+  <div class="today-link" id="todayLink" style="display:none;">Jump to today</div>
+
+  <div class="progress-card">
+    <div class="progress-row">
+      <div class="progress-count"><span id="doneCount">0</span> <span>of <span id="totalCount">0</span> done</div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    <div class="week-strip" id="weekStrip"></div>
+  </div>
+
+  <div class="targets">
+    <div><label for="tLearning">This week's learning focus</label><input id="tLearning" placeholder="e.g. Finish SQL joins module"></div>
+    <div><label for="tApplications">Applications to send</label><input id="tApplications" placeholder="e.g. 5"></div>
+    <div><label for="tNetworking">Networking messages</label><input id="tNetworking" placeholder="e.g. 3"></div>
+  </div>
+
+  <div id="blocksHost"></div>
+
+  <section class="block">
+    <p class="block-title">Notes</p>
+    <textarea id="dayNotes" placeholder="Anything worth remembering about today"></textarea>
+  </section>
+
+  <div class="foot">
+    <button class="clear-btn" id="clearBtn">Clear today's ticks</button>
+  </div>
+
+  <div class="note">Once the second job lands: swap the evening block below for two shorter sessions — one for the new role right after Sycamore, one for learning or job search later. Keep devotion and gym fixed; they anchor the day either way.</div>
+</div>
+
+<script>
+(function(){
+  const LEARNING = ["SQL practice", "Excel deep-dive", "Power BI / Tableau", "Portfolio project"];
+  const JOBSEARCH = ["Shortlist roles", "Send applications", "Networking outreach", "Pipeline review"];
+  const WEEKDAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+  function fmt(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+  function isoWeekday(d){ return (d.getDay()+6)%7; } // 0=Mon..6=Sun
+
+  let current = new Date();
+  current.setHours(0,0,0,0);
+
+  function blocksFor(date){
+    const wd = isoWeekday(date);
+    const blocks = [
+      {id:'devotion', title:'Devotion', label:'Devotion', time:'Morning'},
+      {id:'gym', title:'Gym', label:'Gym session', time:'Morning'},
+    ];
+    if(wd < 5){
+      blocks.push({id:'learning', title:'Learning', label:LEARNING[wd % 4], time:'Before work'});
+      blocks.push({id:'sycamore', title:'Sycamore', label:'Sycamore work block', time:'10:00 – 17:00'});
+      blocks.push({id:'jobsearch', title:'Job search', label:JOBSEARCH[wd % 4], time:'Evening'});
+      blocks.push({id:'evening', title:'Evening', label:'Wind-down / reflection', time:'Evening'});
+    } else {
+      blocks.push({id:'learning', title:'Learning', label:'Free study / review', time:'Flexible'});
+      blocks.push({id:'jobsearch', title:'Job search', label:'Catch-up (optional)', time:'Flexible'});
+      blocks.push({id:'evening', title:'Evening', label:'Rest / plan next week', time:'Evening'});
+    }
+    return blocks;
+  }
+
+  function loadDay(key){
+    try{ return JSON.parse(localStorage.getItem('tracker:'+key)) || {checks:{}, notes:''}; }
+    catch(e){ return {checks:{}, notes:''}; }
+  }
+  function saveDay(key, data){
+    try{ localStorage.setItem('tracker:'+key, JSON.stringify(data)); }catch(e){}
+  }
+  function loadTargets(){
+    try{ return JSON.parse(localStorage.getItem('tracker:targets')) || {}; }catch(e){ return {}; }
+  }
+  function saveTargets(t){ try{ localStorage.setItem('tracker:targets', JSON.stringify(t)); }catch(e){} }
+
+  const blocksHost = document.getElementById('blocksHost');
+  const weekdayLbl = document.getElementById('weekdayLbl');
+  const fullDateLbl = document.getElementById('fullDateLbl');
+  const doneCount = document.getElementById('doneCount');
+  const totalCount = document.getElementById('totalCount');
+  const barFill = document.getElementById('barFill');
+  const dayNotes = document.getElementById('dayNotes');
+  const todayLink = document.getElementById('todayLink');
+
+  let dayData, dayBlocks, dayKey;
+
+  function render(){
+    dayKey = fmt(current);
+    dayData = loadDay(dayKey);
+    dayBlocks = blocksFor(current);
+
+    weekdayLbl.textContent = WEEKDAYS[isoWeekday(current)];
+    fullDateLbl.textContent = current.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+    const todayKey = fmt(new Date(new Date().setHours(0,0,0,0)));
+    todayLink.style.display = (dayKey === todayKey) ? 'none' : 'block';
+
+    blocksHost.innerHTML = '';
+    dayBlocks.forEach(b=>{
+      const sec = document.createElement('section');
+      sec.className = 'block';
+      const checked = !!dayData.checks[b.id];
+      sec.innerHTML = `
+        <p class="block-title">${b.title}</p>
+        <div class="row ${checked?'checked':''}" data-id="${b.id}" tabindex="0" role="checkbox" aria-checked="${checked}">
+          <div class="check"><svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg></div>
+          <div class="row-text"><div class="row-label">${b.label}</div><div class="row-time">${b.time}</div></div>
+        </div>`;
+      blocksHost.appendChild(sec);
+    });
+
+    dayNotes.value = dayData.notes || '';
+    updateProgress();
+    renderWeekStrip();
+  }
+
+  function updateProgress(){
+    const total = dayBlocks.length;
+    const done = dayBlocks.filter(b=>dayData.checks[b.id]).length;
+    doneCount.textContent = done;
+    totalCount.textContent = total;
+    barFill.style.width = total ? Math.round(done/total*100)+'%' : '0%';
+  }
+
+  function renderWeekStrip(){
+    const strip = document.getElementById('weekStrip');
+    strip.innerHTML = '';
+    const start = new Date(current);
+    start.setDate(start.getDate() - isoWeekday(start)); // Monday of this week
+    const todayKey = fmt(new Date(new Date().setHours(0,0,0,0)));
+    for(let i=0;i<7;i++){
+      const d = new Date(start); d.setDate(start.getDate()+i);
+      const key = fmt(d);
+      const data = loadDay(key);
+      const blocks = blocksFor(d);
+      const total = blocks.length || 1;
+      const done = blocks.filter(b=>data.checks[b.id]).length;
+      const pct = Math.round(done/total*100);
+      const el = document.createElement('div');
+      el.className = 'week-day' + (key===todayKey ? ' is-today' : '');
+      el.innerHTML = `<div class="dot"><div class="dot-fill" style="height:${pct}%"></div></div><div class="lbl">${WEEKDAYS[i][0]}</div>`;
+      strip.appendChild(el);
+    }
+  }
+
+  blocksHost.addEventListener('click', e=>{
+    const row = e.target.closest('.row');
+    if(!row) return;
+    const id = row.dataset.id;
+    dayData.checks[id] = !dayData.checks[id];
+    saveDay(dayKey, dayData);
+    render();
+  });
+  blocksHost.addEventListener('keydown', e=>{
+    if((e.key==='Enter'||e.key===' ') && e.target.closest('.row')){
+      e.preventDefault(); e.target.closest('.row').click();
+    }
+  });
+
+  dayNotes.addEventListener('input', ()=>{ dayData.notes = dayNotes.value; saveDay(dayKey, dayData); });
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ current.setDate(current.getDate()-1); render(); });
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ current.setDate(current.getDate()+1); render(); });
+  todayLink.addEventListener('click', ()=>{ current = new Date(); current.setHours(0,0,0,0); render(); });
+
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    dayData.checks = {}; saveDay(dayKey, dayData); render();
+  });
+
+  // targets
+  const targets = loadTargets();
+  const tLearning = document.getElementById('tLearning');
+  const tApplications = document.getElementById('tApplications');
+  const tNetworking = document.getElementById('tNetworking');
+  tLearning.value = targets.learning || '';
+  tApplications.value = targets.applications || '';
+  tNetworking.value = targets.networking || '';
+  [ [tLearning,'learning'], [tApplications,'applications'], [tNetworking,'networking'] ].forEach(([el,key])=>{
+    el.addEventListener('input', ()=>{ const t = loadTargets(); t[key] = el.value; saveTargets(t); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
